@@ -61,7 +61,7 @@
                    | set its name to something other than its default name (typically the simple class name).
                    -->
                 <entry key-ref="proxyAuthenticationHandler" value-ref="proxyPrincipalResolver" />
-                <entry key-ref="primaryAuthenticationHandler" value-ref="primaryPrincipalResolver" />
+                <entry key-ref="ldapAuthenticationHandler" value-ref="primaryPrincipalResolver" />
             </map>
         </constructor-arg>
 
@@ -134,6 +134,7 @@
             p:backingMap-ref="attrRepoBackingMap" />
     
     <util:map id="attrRepoBackingMap">
+        <entry key="sAMAccountName" value="sAMAccountName" />
         <entry key="uid" value="uid" />
         <entry key="eduPersonAffiliation" value="eduPersonAffiliation" /> 
         <entry key="groupMembership" value="groupMembership" />
@@ -193,7 +194,7 @@
 
 <bean id="ldapAuthenticationHandler"
       class="org.jasig.cas.authentication.LdapAuthenticationHandler"
-      p:principalIdAttribute="uid"
+      p:principalIdAttribute="sAMAccountName"
       c:authenticator-ref="authenticator">
     <property name="principalAttributeMap">
         <map>
@@ -203,16 +204,17 @@
                | Use this facility instead of a PrincipalResolver if LDAP is
                | the only attribute source.
                -->
-            <entry key="member" value="member" />
-            <entry key="mail" value="mail" />
             <entry key="displayName" value="displayName" />
+            <entry key="mail" value="mail" />
+            <entry key="memberOf" value="memberOf" />
         </map>
     </property>
 </bean>
 
 <bean id="authenticator" class="org.ldaptive.auth.Authenticator"
       c:resolver-ref="dnResolver"
-      c:handler-ref="authHandler" />
+      c:handler-ref="authHandler"
+      p:entryResolver-ref="entryResolver" />
 
 <!--
    | The following DN format works for many directories, but may need to be
@@ -220,7 +222,7 @@
    -->
 <bean id="dnResolver"
       class="org.ldaptive.auth.FormatDnResolver"
-      c:format="uid=%s,${ldap.baseDn}" />
+      c:format="%s@PS1" />
 
 <bean id="authHandler" class="org.ldaptive.auth.BindAuthenticationHandler"
       p:connectionFactory-ref="connectionFactory" />
@@ -229,13 +231,12 @@
       p:connectionConfig-ref="connectionConfig" />
 
 <bean id="connectionConfig" class="org.ldaptive.ConnectionConfig"
-      p:ldapUrl="${ldap.url}"
+      p:ldapUrl="${ldap.url}" /><!--
       p:connectTimeout="${ldap.connectTimeout}"
-      p:useStartTLS="${ldap.useStartTLS}" />
+      p:useStartTLS="${ldap.useStartTLS}" />-->
 
-<bean id="pruneStrategy" class="org.ldaptive.pool.IdlePruneStrategy"
-      p:prunePeriod="${ldap.pool.prunePeriod}"
-      p:idleTime="${ldap.pool.idleTime}" />
+<bean id="entryResolver"
+      class="org.jasig.cas.authentication.support.UpnSearchEntryResolver"
+      p:baseDn="${ldap.baseDn}" />
 
-<bean id="searchValidator" class="org.ldaptive.pool.SearchValidator" />
 </beans>
