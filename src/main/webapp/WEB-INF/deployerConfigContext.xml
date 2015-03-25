@@ -104,14 +104,14 @@
        | * org.jasig.cas.adaptors.x509.authentication.handler.support.X509CredentialsAuthenticationHandler
        | * org.jasig.cas.support.spnego.authentication.handler.support.JCIFSSpnegoAuthenticationHandler
        -->
-    <bean id="primaryAuthenticationHandler"
-          class="org.jasig.cas.authentication.AcceptUsersAuthenticationHandler">
-        <property name="users">
-            <map>
-                <entry key="ps1member" value="ps1frocks"/>
-            </map>
-        </property>
-    </bean>
+      <bean id="primaryAuthenticationHandler"
+             class="org.jasig.cas.authentication.AcceptUsersAuthenticationHandler">
+           <property name="users">
+               <map>
+                   <entry key="ps1member" value="ps1frocks"/>
+               </map>
+           </property>
+       </bean>
 
     <!-- Required for proxy ticket mechanism -->
     <bean id="proxyPrincipalResolver"
@@ -190,4 +190,52 @@
           p:serviceTicketCountWarnThreshold="5000"
           p:sessionCountWarnThreshold="100000" />
     </util:list>
+
+<bean id="ldapAuthenticationHandler"
+      class="org.jasig.cas.authentication.LdapAuthenticationHandler"
+      p:principalIdAttribute="uid"
+      c:authenticator-ref="authenticator">
+    <property name="principalAttributeMap">
+        <map>
+            <!--
+               | This map provides a simple attribute resolution mechanism.
+               | Keys are LDAP attribute names, values are CAS attribute names.
+               | Use this facility instead of a PrincipalResolver if LDAP is
+               | the only attribute source.
+               -->
+            <entry key="member" value="member" />
+            <entry key="mail" value="mail" />
+            <entry key="displayName" value="displayName" />
+        </map>
+    </property>
+</bean>
+
+<bean id="authenticator" class="org.ldaptive.auth.Authenticator"
+      c:resolver-ref="dnResolver"
+      c:handler-ref="authHandler" />
+
+<!--
+   | The following DN format works for many directories, but may need to be
+   | customized.
+   -->
+<bean id="dnResolver"
+      class="org.ldaptive.auth.FormatDnResolver"
+      c:format="uid=%s,${ldap.baseDn}" />
+
+<bean id="authHandler" class="org.ldaptive.auth.BindAuthenticationHandler"
+      p:connectionFactory-ref="connectionFactory" />
+
+<bean id="connectionFactory" class="org.ldaptive.DefaultConnectionFactory"
+      p:connectionConfig-ref="connectionConfig" />
+
+<bean id="connectionConfig" class="org.ldaptive.ConnectionConfig"
+      p:ldapUrl="${ldap.url}"
+      p:connectTimeout="${ldap.connectTimeout}"
+      p:useStartTLS="${ldap.useStartTLS}" />
+
+<bean id="pruneStrategy" class="org.ldaptive.pool.IdlePruneStrategy"
+      p:prunePeriod="${ldap.pool.prunePeriod}"
+      p:idleTime="${ldap.pool.idleTime}" />
+
+<bean id="searchValidator" class="org.ldaptive.pool.SearchValidator" />
 </beans>
